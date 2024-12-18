@@ -23,15 +23,16 @@ namespace projectM
         public Perifericos()
         {
             InitializeComponent();
-            extraerLista();
         }
         public Perifericos(int idUsuario, bool isUsuario)
         {
 
             InitializeComponent();
-            extraerLista();
+           
             this.idUsuario = idUsuario;
             this.isUsuario = isUsuario;
+
+            extraerLista();
         }
 
         public void extraerLista()
@@ -58,7 +59,19 @@ namespace projectM
         public void mostrar(List<productos> perifericos)
         {
             this.Controls.Clear();
-            int X = 25, Y = 50;
+            Label label9 = new Label();
+            label9.Size = new Size(300, 30);
+            label9.Text = "Productos perifericos";
+            label9.ForeColor = Color.DeepPink;
+            label9.Font = new Font("Century Gothic", 17, FontStyle.Bold);
+            label9.Location = new Point(440, 10);
+            this.Controls.Add(label9);
+            if (this.isUsuario == false)
+            {
+                this.Width = 1200;
+            }
+
+            int X = 30, Y = 60;
             foreach (var productos in perifericos)
             {
                 Panel panel = new Panel();
@@ -78,27 +91,30 @@ namespace projectM
                 pictureBox.Size = new Size(220, 190);
                 try
                 {
-                    var imagen = (Image)Properties.Resources.ResourceManager.GetObject(productos.Imagen.Split('.')[0]);
-                    if (imagen != null)
+                    string rutaImg = Path.Combine(Application.StartupPath, "ImagenesProducto", productos.Imagen);
+                    if (File.Exists(rutaImg))
                     {
-                        pictureBox.Image = imagen;
+                        pictureBox.Image = Image.FromFile(rutaImg);
+                    }
+                    else
+                    {
+                        //pictureBox.Image = Properties.Resources.ImgDefecto;
                     }
                 }
                 catch { }
-                panel.Controls.Add(pictureBox);
                 panel.Controls.Add(pictureBox);
 
                 Label label = new Label();
                 label.Text = productos.Descripcion;
                 label.ForeColor = Color.Black;
                 label.Font = new Font("Century Gothic", 11, FontStyle.Bold);
-                label.Location = new Point(14, 210);
+                label.Location = new Point(14, 215);
                 panel.Controls.Add(label);
 
 
 
 
-                if (this.isUsuario=true)
+                if (this.isUsuario==true)
                 {
                     Button button = new Button();
                     button.Image = Properties.Resources.comp;
@@ -130,16 +146,17 @@ namespace projectM
 
 
                 Label label2 = new Label();
-                label2.Text = Convert.ToString(productos.Existencias);
-                label2.ForeColor = Color.Black;
+                label2.Size = new Size(300, 30);
+                label2.Text = ($"Exis: {Convert.ToString(productos.Existencias)}");
+                label2.ForeColor = Color.BlueViolet;
                 label2.Font = new Font("Century Gothic", 12, FontStyle.Bold);
-                label2.Location = new Point(170, 215);
+                label2.Location = new Point(145, 215);
                 panel.Controls.Add(label2);
 
                 Label label3 = new Label();
                 label3.Text = "$ " + Convert.ToString(productos.Precio);
                 label3.ForeColor = Color.Black;
-                label3.Font = new Font("Century Gothic", 12, FontStyle.Bold);
+                label3.Font = new Font("Century Gothic", 12, FontStyle.Regular);
                 label3.Location = new Point(14, 240);
                 panel.Controls.Add(label3);
 
@@ -149,7 +166,7 @@ namespace projectM
         private void button_Click(object sender, EventArgs e)
         {
             int idComprar = 0;
-            int cantidad = 0;
+            int cantidad = 1;
             Button btn = sender as Button;
 
             DialogResult result = MessageBox.Show("¿Agregar el producto al carrito?", "Confirmacion", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
@@ -164,7 +181,7 @@ namespace projectM
                     int precio = productoSeleccionado.Precio;
 
                     usuario usuario = new usuario();
-                    usuario.agregaCarrito(idUsuario, idComprar, ++cantidad, precio);
+                    usuario.agregaCarrito(idUsuario, idComprar, cantidad, precio);
                 }
 
 

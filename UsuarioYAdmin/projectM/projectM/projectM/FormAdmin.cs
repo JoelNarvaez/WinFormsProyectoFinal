@@ -41,7 +41,7 @@ namespace projectM
             this.nombreUsuario = nombreUsuario;
             this.idUsuario = idUsuario;
             this.Load += FormAdmin_Load;
-            viewhome = new home()
+            viewhome = new home(isUsuario)
 
             {
                 MdiParent = this,
@@ -49,7 +49,6 @@ namespace projectM
             };
 
             viewhome.Show();
-            MessageBox.Show($"This: {this}");
         }
         private void btnDesp_Click(object sender, EventArgs e)
         {
@@ -113,7 +112,7 @@ namespace projectM
         {
             if (viewhome == null)
             {
-                viewhome = new home
+                viewhome = new home(false)
                 {
                     MdiParent = this,
                     Dock = DockStyle.Fill
@@ -122,7 +121,13 @@ namespace projectM
             }
             else
             {
-                viewhome.Activate();
+                viewhome = new home(false)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+                };
+                viewhome.Show();
+                //viewhome.Activate();
             }
         }
 
@@ -140,7 +145,15 @@ namespace projectM
             }
             else
             {
-                viewPerifericos.Activate();
+                viewPerifericos.Dispose();
+                viewPerifericos = new Perifericos(idUsuario, isUsuario)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+
+                };
+                viewPerifericos.Show();
+        
             }
         }
 
@@ -158,7 +171,14 @@ namespace projectM
             }
             else
             {
-                viewGaming.Activate();
+                viewGaming.Dispose();
+                viewGaming = new Gaming(idUsuario, isUsuario)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+                };
+                viewGaming.Show();
+                
             }
         }
 

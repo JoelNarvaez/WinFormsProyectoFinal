@@ -1,5 +1,6 @@
 using System.Drawing.Printing;
 using System.Runtime.InteropServices;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace projectM
 {
@@ -12,7 +13,7 @@ namespace projectM
         private string nombreUsuario;
         private int idUsuario;
         public bool isUsuario = true;
-
+        private List<carrito> carritoPago = new List<carrito>();
         public FormUsuario()
         {
             InitializeComponent();
@@ -27,12 +28,13 @@ namespace projectM
             viewHome.Show();
 
         }
+
         public FormUsuario(string nombreUsuario, int idUsuario)
         {
             InitializeComponent();
             this.nombreUsuario = nombreUsuario;
             this.idUsuario = idUsuario;
-            viewHome = new home()
+            viewHome = new home(isUsuario)
 
             {
                 MdiParent = this,
@@ -136,7 +138,7 @@ namespace projectM
         {
             if (viewHome == null)
             {
-                viewHome = new home
+                viewHome = new home(true)
                 {
                     MdiParent = this,
                     Dock = DockStyle.Fill
@@ -145,7 +147,13 @@ namespace projectM
             }
             else
             {
-                viewHome.Activate();
+                viewHome = new home(true)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+                };
+                viewHome.Show();
+                //viewHome.Activate();
             }
         }
 
@@ -166,7 +174,7 @@ namespace projectM
 
         private void button4_Click(object sender, EventArgs e)
         {
-            if (viewGaming == null || viewGaming.IsDisposed)
+            if (viewGaming == null)
             {
                 viewGaming = new Gaming(idUsuario, isUsuario)
                 {
@@ -177,13 +185,20 @@ namespace projectM
             }
             else
             {
-                viewGaming.Activate();
+                viewGaming.Dispose();
+                viewGaming = new Gaming(idUsuario, isUsuario)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+                };
+                viewGaming.Show();
+
             }
         }
 
         private void button5_Click(object sender, EventArgs e)
         {
-            if (viewPerifericos == null || viewPerifericos.IsDisposed)
+            if (viewPerifericos == null)
             {
                 viewPerifericos = new Perifericos(idUsuario, isUsuario)
                 {
@@ -194,7 +209,13 @@ namespace projectM
             }
             else
             {
-                viewPerifericos.Activate();
+                viewPerifericos.Dispose();
+                viewPerifericos = new Perifericos(idUsuario, isUsuario)
+                {
+                    MdiParent = this,
+                    Dock = DockStyle.Fill
+                };
+                viewPerifericos.Show();
             }
         }
 
@@ -238,25 +259,32 @@ namespace projectM
 
         private void btnPagaroComp_Click(object sender, EventArgs e)
         {
+            pnlProductos.Controls.Clear();
+            mostrarCarro();
+        }
+
+        private void mostrarCarro()
+        {
+            usuario obj = new usuario();
+
+            List<carrito> carritoAux = obj.getcarrito(idUsuario);
+            carritoPago = obj.getcarrito(idUsuario);
             int cuantos = 0;
             pnlProductos.AutoScroll = true;
             pnlProductos.Size = new Size(550, 900);
             pnlProductos.Location = new Point(25, 25);
             pnlProductos.Visible = true;
+
             int X = 20, Y = 20;
             int ancho = 450, alto = 200, margenY = 10;
             int Total = 0;
-            List<carrito> carritoAux = new List<carrito>();
-
-            usuario obj = new usuario();
-
-            carritoAux = obj.getcarrito(idUsuario);
 
             if (carritoAux.Count == 0)
             {
                 MessageBox.Show("NO HAY PRODUCTOS");
-                return; // Salir si no hay productos
+                return;
             }
+
 
             foreach (var p in carritoAux)
             {
@@ -278,14 +306,21 @@ namespace projectM
 
                     try
                     {
-                        var imagen = (Image)Properties.Resources.ResourceManager.GetObject(producto.Imagen.Split('.')[0]);
-                        if (imagen != null)
+                        string rutaImg = Path.Combine(Application.StartupPath, "ImagenesProducto", producto.Imagen);
+                        if (File.Exists(rutaImg))
                         {
-                            pictureBox.Image = imagen;
-                            cuantos++;
+                            pictureBox.Image = Image.FromFile(rutaImg);
+                            
+                        }
+                        else
+                        {
+                            //pictureBox.Image = Properties.Resources.ImgDefecto;
                         }
                     }
                     catch { }
+
+
+
                     panelProd.Controls.Add(pictureBox);
 
                     Label label = new Label();
@@ -297,27 +332,11 @@ namespace projectM
 
                     Label label2 = new Label();
                     label2.Text = "Cantidad: " + p.Cantidad;
+                    cuantos += p.Cantidad;
                     label2.ForeColor = Color.Black;
                     label2.Font = new Font("Century Gothic", 11, FontStyle.Bold);
                     label2.Location = new Point(210, 50);
                     panelProd.Controls.Add(label2);
-
-                    /*Button button = new Button();
-                    button.Image = Properties.Resources.comp;
-                    button.ImageAlign = ContentAlignment.MiddleCenter;
-                    button.Size = new Size(35, 35);
-                    button.Location = new Point(120, 10);
-                    button.FlatStyle = FlatStyle.Flat;
-                    button.Tag = p.Id;
-                    //button.Click += new EventHandler(button_Click);
-                    panelProd.Controls.Add(button);
-
-                    Label label2 = new Label();
-                    label2.Text = Convert.ToString(p.Existencias);
-                    label2.ForeColor = Color.Black;
-                    label2.Font = new Font("Century Gothic", 12, FontStyle.Bold);
-                    label2.Location = new Point(200, 10);
-                    panelProd.Controls.Add(label2);*/
 
                     Label label3 = new Label();
                     label3.Text = "$ " + producto.Precio.ToString("F2");
@@ -337,14 +356,16 @@ namespace projectM
 
                     Total += producto.Precio * p.Cantidad;
 
-
-                    if (p == carritoAux.Last())
+                    if (p==carritoAux.Last())
                     {
+                        Y += 80;
                         Label labelResumen = new Label();
                         labelResumen.ForeColor = Color.Black;
                         labelResumen.Font = new Font("Century Gothic", 16, FontStyle.Bold);
-                        labelResumen.Location = new Point(20, 20);
-                        pnlCarrito.Controls.Add(labelResumen);
+                        labelResumen.Location = new Point(70, Y);
+                        pnlProductos.Controls.Add(labelResumen);
+
+                        Y += 50;
 
                         Label labelProductos = new Label();
                         labelProductos.Text = $"Productos ({cuantos}):                   ${Total}";
@@ -352,8 +373,10 @@ namespace projectM
                         labelProductos.Font = new Font("Century Gothic", 12, FontStyle.Regular);
                         labelProductos.AutoSize = false; // Desactiva AutoSize
                         labelProductos.Size = new Size(300, 30); // Aumenta el tamaño de la etiqueta
-                        labelProductos.Location = new Point(600, 60);
-                        pnlCarrito.Controls.Add(labelProductos);
+                        labelProductos.Location = new Point(70, Y);
+                        pnlProductos.Controls.Add(labelProductos);
+
+                        Y += 50;
 
                         Label labelEnvios = new Label();
                         labelEnvios.Text = $"Envios ({cuantos}):                          Gratis";
@@ -361,8 +384,10 @@ namespace projectM
                         labelEnvios.Font = new Font("Century Gothic", 12, FontStyle.Regular);
                         labelEnvios.AutoSize = false;
                         labelEnvios.Size = new Size(300, 30);
-                        labelEnvios.Location = new Point(600, 90);
-                        pnlCarrito.Controls.Add(labelEnvios);
+                        labelEnvios.Location = new Point(70, Y);
+                        pnlProductos.Controls.Add(labelEnvios);
+
+                        Y += 50;
 
                         Label labelTotal = new Label();
                         labelTotal.Text = $"Total a pagar:                     ${Total}";
@@ -370,76 +395,106 @@ namespace projectM
                         labelTotal.Font = new Font("Century Gothic", 12, FontStyle.Bold);
                         labelTotal.AutoSize = false;
                         labelTotal.Size = new Size(300, 30);
-                        labelTotal.Location = new Point(600, 160);
-                        pnlCarrito.Controls.Add(labelTotal);
-
+                        labelTotal.Location = new Point(70, Y);
+                        pnlProductos.Controls.Add(labelTotal);
                     }
 
                 }
             }
-            pnlProductos.Height = Y + 100;
-            pnlCarrito.Visible = !pnlCarrito.Visible;
+            
 
+            pnlProductos.Height = Y + 100;
+            pnlProductos.Visible = true;
+
+            pnlCarrito.Visible = !pnlCarrito.Visible;
         }
 
         private FlowLayoutPanel ClonePanel(Panel originalPanel)
         {
+            // Crear un nuevo FlowLayoutPanel con las mismas propiedades generales
             FlowLayoutPanel newPanel = new FlowLayoutPanel
             {
                 Size = originalPanel.Size,
                 Location = originalPanel.Location,
                 BackColor = originalPanel.BackColor,
                 BorderStyle = originalPanel.BorderStyle,
-                AutoScroll = true,
+                AutoScroll = true, // Habilitar desplazamiento si es necesario
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                Padding = new Padding(0), // Sin relleno
-                Margin = new Padding(0)   // Sin margen
+                Padding = new Padding(5),
+                Margin = new Padding(5)
             };
 
+            // Iterar sobre los controles del panel original
             foreach (Control control in originalPanel.Controls)
             {
-                Control newControl = (Control)Activator.CreateInstance(control.GetType());
-
-                // Copiar las propiedades del control original al nuevo control
-                newControl.Text = control.Text;
-                newControl.Size = new Size(newPanel.Width - 20, control.Height); // Ajustar ancho al newPanel
-                newControl.Font = control.Font;
-                newControl.ForeColor = control.ForeColor;
-                newControl.BackColor = control.BackColor;
-                newControl.Margin = new Padding(0, 5, 0, 0); // Sin margen superior, solo inferior
-
-                if (control is PictureBox pictureBox)
+                if (control is Label originalLabel)
                 {
-                    PictureBox newPictureBox = new PictureBox
+                    // Crear un nuevo Label con las propiedades de texto y estilo
+                    Label newLabel = new Label
                     {
-                        Size = new Size(newPanel.Width - 20, pictureBox.Height), // Ajustar ancho al newPanel
-                        Image = pictureBox.Image,
-                        SizeMode = pictureBox.SizeMode,
-                        BackColor = pictureBox.BackColor,
-                        Margin = new Padding(0, 5, 0, 0) // Sin margen superior, solo inferior
+                        Text = originalLabel.Text,
+                        Font = originalLabel.Font,
+                        ForeColor = originalLabel.ForeColor,
+                        BackColor = originalLabel.BackColor,
+                        AutoSize = true, // Ajustar automáticamente el tamaño
+                        Margin = new Padding(0, 5, 0, 0) // Márgenes
                     };
-                    newControl = newPictureBox;
+                    newPanel.Controls.Add(newLabel);
                 }
-
-                newPanel.Controls.Add(newControl);
+                else if (control is Button originalButton || control is PictureBox originalPictureBox)
+                {
+                    continue;
+                }
+                else if (control is TextBox originalTextBox)
+                {
+                    // Crear un nuevo TextBox con las propiedades de texto
+                    TextBox newTextBox = new TextBox
+                    {
+                        Text = originalTextBox.Text,
+                        Font = originalTextBox.Font,
+                        ForeColor = originalTextBox.ForeColor,
+                        BackColor = originalTextBox.BackColor,
+                        Size = originalTextBox.Size,
+                        Margin = new Padding(0, 5, 0, 0)
+                    };
+                    newPanel.Controls.Add(newTextBox);
+                }
             }
 
             return newPanel;
         }
 
-
         private void botonRedondo1_Click(object sender, EventArgs e)
         {
-            FlowLayoutPanel clonedPanel = ClonePanel(pnlCarrito) as FlowLayoutPanel;
-            FormPago formPago = new FormPago(clonedPanel);
+            FlowLayoutPanel clonedPanel = ClonePanel(pnlProductos);
+            FormPago formPago = new FormPago(clonedPanel, nombreUsuario, carritoPago, idUsuario);
             formPago.Show();
             this.Close();
+
         }
 
         private void labelFecha_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void botonRedondo2_Click(object sender, EventArgs e)
+        {
+            Button btn = sender as Button;
+            DialogResult result = MessageBox.Show("¿Eliminar carrito definitivamente?", "Confirmacion", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+
+            if (btn != null)
+            {
+                usuario obj = new usuario();
+                obj.borrarCarrito(idUsuario);
+                pnlCarrito.Hide();
+            }
+            else
+            {
+                MessageBox.Show("Se cancelo la eliminacion");
+            }
+           
         }
     }
 }

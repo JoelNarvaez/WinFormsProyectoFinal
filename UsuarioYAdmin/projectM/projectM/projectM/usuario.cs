@@ -1,6 +1,7 @@
 ﻿using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Runtime.Intrinsics.Arm;
 using System.Text;
@@ -12,100 +13,144 @@ namespace projectM
 {
     public class usuario
     {
+        private ListaProductos prodAux;
         private MySqlConnection connection;
 
+
+        private List<carrito> carritoAux=new List<carrito>();
         public usuario()
         {
+            this.prodAux=new ListaProductos();
             this.Connect();
         }
-        public void compra(int idA)
+        public void compra(List<carrito> carrito)
         {
-            productos item = null;
-            int id;
-            string imagen;
-            string descripcion;
-            int precio;
-            int existencias;
-            string coleccion;
             try
             {
-                string query = "SELECT * FROM productos where id=" + idA + ";";
-                MySqlCommand command = new MySqlCommand(query, this.connection);
-
-                MySqlDataReader reader = command.ExecuteReader();
-                while (reader.Read())
+                foreach (var itemCarrito in carrito)
                 {
+                 
+                    int idProducto = itemCarrito.IdProducto;
+                    int cantidadComprada = itemCarrito.Cantidad;
 
-                    id = Convert.ToInt32(reader["id"]);
-                    imagen = Convert.ToString(reader["imagen"]) ?? "";
-                    descripcion = Convert.ToString(reader["descripcion"]) ?? "";
-                    precio = Convert.ToInt32(reader["precio"]);
-                    existencias = Convert.ToInt32(reader["existencias"]);
-                    coleccion = Convert.ToString(reader["coleccion"]) ?? "";
-                    item = new productos(id, imagen, descripcion, precio, existencias, coleccion);
+                    string query = "SELECT existencias FROM productos WHERE id = @idProducto;";
+                    MySqlCommand command = new MySqlCommand(query, this.connection);
+                    command.Parameters.AddWithValue("@idProducto", idProducto);
 
+                    int existenciasActuales = 0;
 
+                    //Leer existencias actuales
+                    using (MySqlDataReader reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            existenciasActuales = Convert.ToInt32(reader["existencias"]);
+                        }
+                    }
+
+                    // Verificar si hay suficientes existencias
+                    if (existenciasActuales >= cantidadComprada)
+                    {
+                        // Resta la cantidad comprada a las existencias actuales
+                        int nuevasExistencias = existenciasActuales - cantidadComprada;
+
+                        //Actualiza la base de datos
+                        string updateQuery = "UPDATE productos SET existencias = @nuevasExistencias WHERE id = @idProducto;";
+                        MySqlCommand updateCommand = new MySqlCommand(updateQuery, this.connection);
+                        updateCommand.Parameters.AddWithValue("@nuevasExistencias", nuevasExistencias);
+                        updateCommand.Parameters.AddWithValue("@idProducto", idProducto);
+
+                        updateCommand.ExecuteNonQuery();
+                    }
+                    else
+                    {
+                        // Mensaje en caso de falta de existencias
+                        MessageBox.Show($"No hay suficientes existencias para el producto con ID: {idProducto}");
+                    }
                 }
-                reader.Close();
-                if(item != null && item.Existencias > 0)
-                {
-                    item.Existencias -= 1;
-                    existencias = item.Existencias;
-                    string updatequery = "UPDATE productos SET existencias= " + existencias + "'" + "where id=" + idA + ";"; ; 
-                    MySqlCommand updatecmd = new MySqlCommand(updatequery, this.connection);
-                    updatecmd.ExecuteNonQuery();
-                }
+
+                MessageBox.Show("Compra procesada exitosamente.");
             }
             catch (Exception ex)
             {
-                //MessageBox.Show("Error al leer la tabla de la base de datos: " + ex.Message);
+                MessageBox.Show("Error al procesar la compra: " + ex.Message);
+            }
+            finally
+            {
                 this.Disconnect();
             }
-
         }
+
 
         public void agregaCarrito(int idUsuario, int idProd, int cantidad, int precio)
         {
             string query = "";
             try
             {
-                //Comprobar si el producto ya esta en el carrito con el mismo usuario
-                query = "SELECT cantidad FROM comprasaux WHERE idUsuario = @idUsuario AND idProd = @idProd";
 
-                MySqlCommand cmdCheck = new MySqlCommand(query, connection);
-                cmdCheck.Parameters.AddWithValue("@idUsuario", idUsuario);
-                cmdCheck.Parameters.AddWithValue("@idProd", idProd);
-
-                var result = cmdCheck.ExecuteScalar(); 
-
-                if (result != null)//si ya se encuentra en el carrito para ese usuario se aumenta solo en cantidad
+                var producto = prodAux.crear().FirstOrDefault(p => p.Id == idProd);
+                if (producto != null)
                 {
-                    int cantActual=Convert.ToInt32(result);
-                    int nuevaCant = cantActual + 1;
-                    query = "UPDATE comprasaux SET cantidad = @nuevaCant WHERE idUsuario = @idUsuario AND idProd = @idProd";
-                    MySqlCommand cmdUpdate = new MySqlCommand(query, connection);
-                    cmdUpdate.Parameters.AddWithValue("@nuevaCant", nuevaCant);
-                    cmdUpdate.Parameters.AddWithValue("@idUsuario", idUsuario);
-                    cmdUpdate.Parameters.AddWithValue("@idProd", idProd);
+                    if(producto.Existencias == 0)
+                    {
+                        MessageBox.Show("No hay unidades en stock");
+                        return;
+                    }
 
-                    cmdUpdate.ExecuteNonQuery ();
+                    if(cantidad > producto.Existencias)
+                    {
+                        MessageBox.Show($"Ya no hay unidades disponibles  {producto.Existencias} ");
+                        return;
+                    }
+
+                    //SI TODO ESTA BIEN SI SE AGREGA AL CARRITO
+
+                    try
+                    {
+                        //Comprobar si el producto ya esta en el carrito con el mismo usuario
+                        query = "SELECT cantidad FROM comprasaux WHERE idUsuario = @idUsuario AND idProd = @idProd";
+
+                        MySqlCommand cmdCheck = new MySqlCommand(query, connection);
+                        cmdCheck.Parameters.AddWithValue("@idUsuario", idUsuario);
+                        cmdCheck.Parameters.AddWithValue("@idProd", idProd);
+
+                        var result = cmdCheck.ExecuteScalar();
+
+                        if (result != null)//si ya se encuentra en el carrito para ese usuario se aumenta solo en cantidad
+                        {
+                            int cantActual = Convert.ToInt32(result);
+                            int nuevaCant = cantActual + 1;
+                            query = "UPDATE comprasaux SET cantidad = @nuevaCant WHERE idUsuario = @idUsuario AND idProd = @idProd";
+                            MySqlCommand cmdUpdate = new MySqlCommand(query, connection);
+                            cmdUpdate.Parameters.AddWithValue("@nuevaCant", nuevaCant);
+                            cmdUpdate.Parameters.AddWithValue("@idUsuario", idUsuario);
+                            cmdUpdate.Parameters.AddWithValue("@idProd", idProd);
+
+                            cmdUpdate.ExecuteNonQuery();
+                        }
+                        else
+                        {
+                            query = "INSERT INTO comprasaux (idUsuario,idProd,cantidad,precio) VALUES ("
+                               + "'" + idUsuario + "',"
+                               + "'" + idProd + "', "
+                               + "'" + cantidad + "',"
+                               + "'" + precio + "')";
+
+
+
+                            MySqlCommand cmd = new MySqlCommand(query, connection);
+                            cmd.ExecuteNonQuery();
+
+                        }
+                        producto.Existencias-=1;
+
+                        MessageBox.Show("Producto agregado al carrito");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error");
+                    }     
                 }
-                else
-                {
-                    query = "INSERT INTO comprasaux (idUsuario,idProd,cantidad,precio) VALUES ("
-                       + "'" + idUsuario + "',"
-                       + "'" + idProd + "', "
-                       + "'" + cantidad + "',"
-                       + "'" + precio + "')";
-
-
-
-                    MySqlCommand cmd = new MySqlCommand(query, connection);
-                    cmd.ExecuteNonQuery();
-                    
-                }
-
-                MessageBox.Show("Se agrego al carrito");
 
             }
             catch (Exception ex)
@@ -189,13 +234,28 @@ namespace projectM
             return producto;
         }
 
+        public void borrarCarrito(int idUsuario)
+        {
+            string query = "";
+            try
+            {
+                query = "DELETE FROM comprasaux WHERE idUsuario = @idUsuario";
 
+                MySqlCommand cmdDelete = new MySqlCommand(query, connection);
+                cmdDelete.Parameters.AddWithValue("@idUsuario", idUsuario);
+
+                cmdDelete.ExecuteNonQuery();
+            }
+            catch
+            {
+                this.Disconnect();
+            }
+        }
         public void Disconnect()
         {
             if (connection != null && connection.State == System.Data.ConnectionState.Open)
             {
                 connection.Close();
-                //MessageBox.Show("Conexión cerrada correctamente.", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -206,12 +266,88 @@ namespace projectM
             {
                 connection = new MySqlConnection(cadena);
                 connection.Open();
-                //MessageBox.Show("Conexión establecida exitosamente.", "Información", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                //MessageBox.Show($"Error al conectar con la base de datos: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
+        public void agregarPersonaMonto(decimal monto, string nombreUsuario)
+        {
+            // La consulta SQL suma el valor de monto al valor existente
+            string query = "UPDATE personas SET monto = monto + @monto WHERE nombre = @nombreUsuario";
+
+            try
+            {
+                // Abre la conexión si está cerrada
+                if (connection.State != ConnectionState.Open)
+                {
+                    connection.Open();
+                }
+
+                using (MySqlCommand cmdUpdate = new MySqlCommand(query, connection))
+                {
+                    // Parámetros seguros para evitar SQL Injection
+                    cmdUpdate.Parameters.AddWithValue("@monto", monto);
+                    cmdUpdate.Parameters.AddWithValue("@nombreUsuario", nombreUsuario);
+
+                    // Ejecutar la consulta y verificar si se actualizó alguna fila
+                    int result = cmdUpdate.ExecuteNonQuery();
+
+                    if (result == 0)
+                    {
+                        MessageBox.Show("Usuario no encontrado.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error al actualizar la base de datos: " + ex.Message);
+            }
+            finally
+            {
+                // Cerrar la conexión en el bloque 'finally'
+                connection.Close();
+            }
+        }
+
+
+        public void actualVentas(List<carrito> carritoaux, int idUsuario)
+        {
+            string query = "";
+
+            MySqlCommand cmdCheck = new MySqlCommand(query, connection);
+
+            try
+            {
+                foreach (var item in carritoaux)
+                {
+                    
+                    query = "INSERT INTO ventas(idUsuario, idProd, cantidad, precio) VALUES("
+                        + "'" + idUsuario + "',"
+                               + "'" + item.IdProducto + "', "
+                               + "'" + item.Cantidad + "',"
+                               + "'" + item.Precio + "')";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Disconnect();
+            }
+        }
+
+
+
+
+
+
+
     }
+
+
+
+
 }

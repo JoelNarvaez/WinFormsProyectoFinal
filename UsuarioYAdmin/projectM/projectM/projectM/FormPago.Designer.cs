@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormPago));
             panel2 = new Panel();
             panel1 = new Panel();
@@ -60,6 +61,7 @@
             buttonCerrar = new Button();
             botonRedondo1 = new botonRedondo();
             panelOxxo = new Panel();
+            timer1 = new System.Windows.Forms.Timer(components);
             panel2.SuspendLayout();
             panel3.SuspendLayout();
             panel4.SuspendLayout();
@@ -440,6 +442,7 @@
             buttonCerrar.Text = "Cerrar Sesión";
             buttonCerrar.UseVisualStyleBackColor = true;
             buttonCerrar.Visible = false;
+            buttonCerrar.Click += buttonCerrar_Click;
             // 
             // botonRedondo1
             // 
@@ -468,6 +471,11 @@
             panelOxxo.Name = "panelOxxo";
             panelOxxo.Size = new Size(607, 435);
             panelOxxo.TabIndex = 13;
+            // 
+            // timer1
+            // 
+            timer1.Enabled = true;
+            timer1.Tick += timer1_Tick;
             // 
             // FormPago
             // 
@@ -538,5 +546,6 @@
         private botonRedondo botonRedondo1;
         private Panel panelOxxo;
         private Panel panel1;
+        private System.Windows.Forms.Timer timer1;
     }
 }

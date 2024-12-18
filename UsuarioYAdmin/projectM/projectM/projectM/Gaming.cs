@@ -21,15 +21,15 @@ namespace projectM
         public Gaming()
         {
             InitializeComponent();
-            extraerLista();
-
         }
         public Gaming(int idUsuario, bool isUsuario)
         {
             InitializeComponent();
-            extraerLista();
+            
             this.idUsuario = idUsuario;
             this.isUsuario = isUsuario;
+
+            extraerLista();
         }
 
         public void extraerLista()
@@ -56,8 +56,21 @@ namespace projectM
 
         public void mostrar(List<productos> gaming)
         {
+
             this.Controls.Clear();
-            int X = 25, Y = 50;
+            Label label = new Label();
+            label.Size = new Size(300, 30);
+            label.Text = "Productos Gaming";
+            label.ForeColor = Color.DeepPink;
+            label.Font = new Font("Century Gothic", 17, FontStyle.Bold);
+            label.Location = new Point(440, 10);
+            this.Controls.Add(label);
+            label1.Visible = true;
+            if (this.isUsuario == false)
+            {
+                this.Width = 1200;
+            }
+            int X = 30, Y = 60;
             foreach (var productos in gaming)
             {
                 Panel panel = new Panel();
@@ -79,24 +92,31 @@ namespace projectM
                 
                 try
                 {
-                    var imagen = (Image)Properties.Resources.ResourceManager.GetObject(productos.Imagen.Split('.')[0]);
-                    if (imagen != null)
+                    string rutaImg = Path.Combine(Application.StartupPath, "ImagenesProducto", productos.Imagen);
+                    if (File.Exists(rutaImg))
                     {
-                        pictureBox.Image = imagen;
+                        pictureBox.Image=Image.FromFile(rutaImg);
+                    }
+                    else
+                    {
+                        //pictureBox.Image = Properties.Resources.ImgDefecto;
                     }
                 }
-                catch { }
+                catch
+                {
+
+                }
                 panel.Controls.Add(pictureBox);
 
-                Label label = new Label();
-                label.Text = productos.Descripcion;
-                label.ForeColor = Color.Black;
-                label.Font = new Font("Century Gothic", 11, FontStyle.Bold);
-                label.Location = new Point(14, 210);
-                panel.Controls.Add(label);
+                Label label8 = new Label();
+                label8.Text = productos.Descripcion;
+                label8.ForeColor = Color.Black;
+                label8.Font = new Font("Century Gothic", 11, FontStyle.Bold);
+                label8.Location = new Point(14, 215);
+                panel.Controls.Add(label8);
 
 
-                if (this.isUsuario = true)
+                if (this.isUsuario == true)
                 {
                     Button button = new Button();
                     button.Image = Properties.Resources.comp;
@@ -127,16 +147,17 @@ namespace projectM
 
 
                 Label label2 = new Label();
-                label2.Text = Convert.ToString(productos.Existencias);
-                label2.ForeColor = Color.Black;
+                label2.Size = new Size(300, 30);
+                label2.Text = ($"Exis: {Convert.ToString(productos.Existencias)}");
+                label2.ForeColor = Color.BlueViolet;
+                label2.Location = new Point(145, 215);
                 label2.Font = new Font("Century Gothic", 12, FontStyle.Bold);
-                label2.Location = new Point(170, 215);
                 panel.Controls.Add(label2);
 
                 Label label3 = new Label();
                 label3.Text = "$ "+ Convert.ToString(productos.Precio);
                 label3.ForeColor = Color.Black;
-                label3.Font = new Font("Century Gothic", 12, FontStyle.Bold);
+                label3.Font = new Font("Century Gothic", 12, FontStyle.Regular);
                 label3.Location = new Point(14, 240);
                 panel.Controls.Add(label3);
 
